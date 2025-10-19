@@ -100,6 +100,13 @@
         let chart;
         let pollData = { question: '', options: [], results: [] };
 
+        // --- Server Configuration ---
+        const peerConfig = {
+            host: 'wrt-mvp-147708164583.europe-west1.run.app',
+            path: '/peerjs/myapp',
+            secure: true
+        };
+
         // --- Initialization ---
         function initialize() {
             const urlParams = new URLSearchParams(window.location.search);
@@ -116,35 +123,18 @@
             roleSelector.classList.add('hidden');
             teacherView.classList.remove('hidden');
 
-            peer = new Peer(undefined, {
-                host: 'wrt-mvp-147708164583.europe-west1.run.app',
-                path: '/peerjs/myapp',
-                secure: true
-            });
+            peer = new Peer(undefined, peerConfig);
             
             peer.on('open', (id) => {
                 console.log('Teacher Peer ID:', id);
-                
-                // =========================================================================
-                // == THE FIX: Wait for the QRCode library to be ready before using it ==
-                // =========================================================================
-                const waitForQRCode = setInterval(() => {
-                    // Check if the QRCode object is available in the window
-                    if (typeof QRCode !== 'undefined') {
-                        clearInterval(waitForQRCode); // Stop checking once it's found
-
-                        // Now it's safe to generate the QR code
-                        const joinUrl = `${window.location.origin}${window.location.pathname}?teacherId=${id}`;
-                        const qrCanvasContainer = document.getElementById('qr-code');
-                        qrCanvasContainer.innerHTML = '';
-                        QRCode.toCanvas(qrCanvasContainer.appendChild(document.createElement('canvas')), joinUrl, { width: 180 }, (error) => {
-                            if (error) console.error(error);
-                        });
-
-                        document.getElementById('connection-status').textContent = 'Ready for connections!';
-                        document.getElementById('connection-status').classList.replace('text-yellow-400', 'text-green-400');
-                    }
-                }, 100); // Check every 100 milliseconds
+                const joinUrl = `${window.location.origin}${window.location.pathname}?teacherId=${id}`;
+                const qrCanvasContainer = document.getElementById('qr-code');
+                qrCanvasContainer.innerHTML = '';
+                QRCode.toCanvas(qrCanvasContainer.appendChild(document.createElement('canvas')), joinUrl, { width: 180 }, (error) => {
+                    if (error) console.error(error);
+                });
+                document.getElementById('connection-status').textContent = 'Ready for connections!';
+                document.getElementById('connection-status').classList.replace('text-yellow-400', 'text-green-400');
             });
 
             peer.on('error', (err) => {
@@ -210,9 +200,10 @@
             roleSelector.classList.add('hidden');
             studentView.classList.remove('hidden');
             
-            // For the student, we connect to the public PeerJS server unless a custom one is specified.
-            // This is simpler and doesn't require the student to know the custom server URL.
-            peer = new Peer(); 
+            // =========================================================================
+            // == THE FIX: Student must connect to the same server as the teacher. ==
+            // =========================================================================
+            peer = new Peer(undefined, peerConfig);
 
             const connectView = document.getElementById('student-connect-view');
             const questionView = document.getElementById('student-question-view');
