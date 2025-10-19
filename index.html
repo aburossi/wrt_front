@@ -127,14 +127,26 @@
             
             peer.on('open', (id) => {
                 console.log('Teacher Peer ID:', id);
-                const joinUrl = `${window.location.origin}${window.location.pathname}?teacherId=${id}`;
-                const qrCanvasContainer = document.getElementById('qr-code');
-                qrCanvasContainer.innerHTML = '';
-                QRCode.toCanvas(qrCanvasContainer.appendChild(document.createElement('canvas')), joinUrl, { width: 180 }, (error) => {
-                    if (error) console.error(error);
-                });
-                document.getElementById('connection-status').textContent = 'Ready for connections!';
-                document.getElementById('connection-status').classList.replace('text-yellow-400', 'text-green-400');
+
+                // =========================================================================
+                // == THE FIX: Wait for the QRCode library to be ready before using it ==
+                // =========================================================================
+                const waitForQRCode = setInterval(() => {
+                    if (typeof QRCode !== 'undefined') {
+                        clearInterval(waitForQRCode); // Stop checking once it's found
+
+                        // Now it's safe to generate the QR code
+                        const joinUrl = `${window.location.origin}${window.location.pathname}?teacherId=${id}`;
+                        const qrCanvasContainer = document.getElementById('qr-code');
+                        qrCanvasContainer.innerHTML = '';
+                        QRCode.toCanvas(qrCanvasContainer.appendChild(document.createElement('canvas')), joinUrl, { width: 180 }, (error) => {
+                            if (error) console.error(error);
+                        });
+
+                        document.getElementById('connection-status').textContent = 'Ready for connections!';
+                        document.getElementById('connection-status').classList.replace('text-yellow-400', 'text-green-400');
+                    }
+                }, 100); // Check every 100 milliseconds
             });
 
             peer.on('error', (err) => {
@@ -200,9 +212,6 @@
             roleSelector.classList.add('hidden');
             studentView.classList.remove('hidden');
             
-            // =========================================================================
-            // == THE FIX: Student must connect to the same server as the teacher. ==
-            // =========================================================================
             peer = new Peer(undefined, peerConfig);
 
             const connectView = document.getElementById('student-connect-view');
